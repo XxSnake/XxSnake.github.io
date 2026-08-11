@@ -1,4 +1,4 @@
-const CACHE_NAME = "steel-quiz-v1";
+const CACHE_NAME = "steel-quiz-v2";
 const APP_SHELL = [
   "/steel-quiz/",
   "/steel-quiz/index.html",
