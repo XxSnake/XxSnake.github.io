@@ -146,17 +146,15 @@
     .bank-toolbar h2 { margin: 0 0 5px; }
     .bank-tools { display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
     .bank-list { display: grid; gap: 26px; margin-top: 24px; }
-    .bank-section h3 {
+    .bank-section > summary {
       margin: 0 0 12px; padding: 12px 14px; border-radius: 12px;
       background: var(--blue-soft); color: #1b4f91; font-size: 17px;
+      font-weight: 750; cursor: pointer;
     }
+    .bank-section:not([open]) > summary { margin-bottom: 0; }
     .bank-section-items { display: grid; gap: 11px; }
     .bank-item { border: 1px solid var(--line); border-radius: 13px; background: #fff; overflow: hidden; }
-    .bank-item summary {
-      cursor: pointer; padding: 13px 15px; font-weight: 750; color: #25334c;
-      background: #f8fafd;
-    }
-    .bank-item[open] summary { border-bottom: 1px solid var(--line); }
+    .bank-question-title { padding: 13px 15px; font-weight: 750; color: #25334c; background: #f8fafd; border-bottom: 1px solid var(--line); }
     .bank-answer-body { padding: 14px 16px 16px; }
     .bank-options { display: grid; gap: 6px; margin-bottom: 12px; }
     .bank-option { padding: 7px 10px; border-radius: 9px; color: #44516a; }
@@ -178,7 +176,7 @@
       .bank-toolbar { display: block; }
       .bank-tools { display: grid; grid-template-columns: 1fr 1fr; margin-top: 14px; }
       .bank-tools button { width: 100%; }
-      .bank-item summary { padding: 12px; }
+      .bank-question-title { padding: 12px; }
       .bank-answer-body { padding: 12px; }
       select { font-size: 16px; }
     }
@@ -641,26 +639,27 @@
     function renderBankView() {
       const bankList = el("bankList");
       if (bankList.children.length) return;
-      el("bankViewInfo").textContent = `共 ${questionBank.length} 题：单选 ${typeCount("single")} · 多选 ${typeCount("multi")} · 判断 ${typeCount("judge")}。已按 5 个章节排列，答案默认展开。`;
+      el("bankViewInfo").textContent = `共 ${questionBank.length} 题：单选 ${typeCount("single")} · 多选 ${typeCount("multi")} · 判断 ${typeCount("judge")}。已按 5 个章节排列，章节默认展开。`;
 
       [...new Set(questionBank.map(q => q.s))].forEach(section => {
         const questions = questionBank.filter(q => q.s === section);
-        const sectionNode = document.createElement("section");
+        const sectionNode = document.createElement("details");
         sectionNode.className = "bank-section";
-        const heading = document.createElement("h3");
+        sectionNode.open = true;
+        const heading = document.createElement("summary");
         heading.textContent = `${section}（${questions.length} 题）`;
         sectionNode.appendChild(heading);
 
         const items = document.createElement("div");
         items.className = "bank-section-items";
         questions.forEach(q => {
-          const details = document.createElement("details");
-          details.className = "bank-item";
-          details.open = true;
+          const questionItem = document.createElement("article");
+          questionItem.className = "bank-item";
 
-          const title = document.createElement("summary");
+          const title = document.createElement("div");
+          title.className = "bank-question-title";
           title.textContent = `${q.id}. [${typeNames[q.t]}] ${q.q}`;
-          details.appendChild(title);
+          questionItem.appendChild(title);
 
           const body = document.createElement("div");
           body.className = "bank-answer-body";
@@ -689,8 +688,8 @@
           source.textContent = `依据：${q.r}`;
           body.appendChild(source);
 
-          details.appendChild(body);
-          items.appendChild(details);
+          questionItem.appendChild(body);
+          items.appendChild(questionItem);
         });
         sectionNode.appendChild(items);
         bankList.appendChild(sectionNode);
@@ -715,7 +714,7 @@
     }
 
     function setAllAnswersOpen(open) {
-      document.querySelectorAll(".bank-item").forEach(item => item.open = open);
+      document.querySelectorAll(".bank-section").forEach(section => section.open = open);
     }
 
     function submitAnswer() {
