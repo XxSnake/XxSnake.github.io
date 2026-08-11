@@ -139,6 +139,30 @@
     .review-q { font-weight: 700; }
     .review-a { color: var(--green); }
     .review-yours { color: var(--red); }
+    .bank-toolbar {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 18px;
+      padding-bottom: 18px; border-bottom: 1px solid var(--line);
+    }
+    .bank-toolbar h2 { margin: 0 0 5px; }
+    .bank-tools { display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
+    .bank-list { display: grid; gap: 26px; margin-top: 24px; }
+    .bank-section h3 {
+      margin: 0 0 12px; padding: 12px 14px; border-radius: 12px;
+      background: var(--blue-soft); color: #1b4f91; font-size: 17px;
+    }
+    .bank-section-items { display: grid; gap: 11px; }
+    .bank-item { border: 1px solid var(--line); border-radius: 13px; background: #fff; overflow: hidden; }
+    .bank-item summary {
+      cursor: pointer; padding: 13px 15px; font-weight: 750; color: #25334c;
+      background: #f8fafd;
+    }
+    .bank-item[open] summary { border-bottom: 1px solid var(--line); }
+    .bank-answer-body { padding: 14px 16px 16px; }
+    .bank-options { display: grid; gap: 6px; margin-bottom: 12px; }
+    .bank-option { padding: 7px 10px; border-radius: 9px; color: #44516a; }
+    .bank-option.correct { background: var(--green-soft); color: #17643f; font-weight: 700; }
+    .bank-correct { color: var(--green); font-weight: 750; }
+    .bank-explain { margin: 8px 0 0; }
     .footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 18px; }
     @media (max-width: 640px) {
       .wrap { margin-top: 18px; }
@@ -151,6 +175,11 @@
       .option { min-height: 54px; padding: 13px 12px; }
       .actions { display: grid; grid-template-columns: 1fr; }
       .actions button { width: 100%; }
+      .bank-toolbar { display: block; }
+      .bank-tools { display: grid; grid-template-columns: 1fr 1fr; margin-top: 14px; }
+      .bank-tools button { width: 100%; }
+      .bank-item summary { padding: 12px; }
+      .bank-answer-body { padding: 12px; }
       select { font-size: 16px; }
     }
   </style>
@@ -187,6 +216,7 @@
       </div>
       <div class="start-row">
         <button id="startBtn" class="primary">按题型顺序开始刷题</button>
+        <button id="viewBankBtn" class="secondary">查看全部题库与答案</button>
         <span id="bankInfo" class="hint"></span>
       </div>
       <details class="mobile-note">
@@ -231,6 +261,23 @@
         <button id="backBtn" class="secondary">重新选择范围</button>
       </div>
       <div id="review" class="review"></div>
+    </section>
+
+    <section id="bankView" class="card hidden">
+      <div class="bank-toolbar">
+        <div>
+          <h2>全部题库与答案</h2>
+          <div id="bankViewInfo" class="hint"></div>
+        </div>
+        <div class="bank-tools">
+          <button id="expandAllBtn" class="secondary">全部展开</button>
+          <button id="collapseAllBtn" class="secondary">全部收起</button>
+        </div>
+      </div>
+      <div id="bankList" class="bank-list"></div>
+      <div class="actions">
+        <button id="closeBankBtn" class="primary">返回刷题设置</button>
+      </div>
     </section>
 
     <div class="footer">在线版 · 首次打开后支持离线使用 · 题目依据：《钢结构检测》最后一章“钢结构检测规范重点条文”（课件 PDF 第 1-44 页 / 教材第 215-258 页）</div>
@@ -445,7 +492,7 @@
     const typeWeights = {single:60, multi:20, judge:20};
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const el = id => document.getElementById(id);
-    const setup = el("setup"), quiz = el("quiz"), summary = el("summary");
+    const setup = el("setup"), quiz = el("quiz"), summary = el("summary"), bankView = el("bankView");
     let session = [], index = 0, right = 0, answered = false, wrongItems = [], lastSettings = null;
 
     [...new Set(questionBank.map(q => q.s))].forEach(section => {
@@ -591,6 +638,86 @@
     function sameAnswer(a,b) { return a.length === b.length && a.every((v,i) => v === b[i]); }
     function answerText(q, values) { return values.length ? values.map(v => `${letters[v]}. ${q.o[v]}`).join("；") : "未作答"; }
 
+    function renderBankView() {
+      const bankList = el("bankList");
+      if (bankList.children.length) return;
+      el("bankViewInfo").textContent = `共 ${questionBank.length} 题：单选 ${typeCount("single")} · 多选 ${typeCount("multi")} · 判断 ${typeCount("judge")}。已按 5 个章节排列，答案默认展开。`;
+
+      [...new Set(questionBank.map(q => q.s))].forEach(section => {
+        const questions = questionBank.filter(q => q.s === section);
+        const sectionNode = document.createElement("section");
+        sectionNode.className = "bank-section";
+        const heading = document.createElement("h3");
+        heading.textContent = `${section}（${questions.length} 题）`;
+        sectionNode.appendChild(heading);
+
+        const items = document.createElement("div");
+        items.className = "bank-section-items";
+        questions.forEach(q => {
+          const details = document.createElement("details");
+          details.className = "bank-item";
+          details.open = true;
+
+          const title = document.createElement("summary");
+          title.textContent = `${q.id}. [${typeNames[q.t]}] ${q.q}`;
+          details.appendChild(title);
+
+          const body = document.createElement("div");
+          body.className = "bank-answer-body";
+          const options = document.createElement("div");
+          options.className = "bank-options";
+          q.o.forEach((optionText, optionIndex) => {
+            const option = document.createElement("div");
+            option.className = `bank-option${q.a.includes(optionIndex) ? " correct" : ""}`;
+            option.textContent = `${letters[optionIndex]}. ${optionText}`;
+            options.appendChild(option);
+          });
+          body.appendChild(options);
+
+          const correct = document.createElement("div");
+          correct.className = "bank-correct";
+          correct.textContent = `正确答案：${answerText(q, q.a)}`;
+          body.appendChild(correct);
+
+          const explain = document.createElement("p");
+          explain.className = "bank-explain";
+          explain.textContent = `解析：${q.e}`;
+          body.appendChild(explain);
+
+          const source = document.createElement("div");
+          source.className = "source";
+          source.textContent = `依据：${q.r}`;
+          body.appendChild(source);
+
+          details.appendChild(body);
+          items.appendChild(details);
+        });
+        sectionNode.appendChild(items);
+        bankList.appendChild(sectionNode);
+      });
+    }
+
+    function showBankView() {
+      renderBankView();
+      setup.classList.add("hidden");
+      quiz.classList.add("hidden");
+      summary.classList.add("hidden");
+      bankView.classList.remove("hidden");
+      window.scrollTo({top:0, behavior:"smooth"});
+    }
+
+    function showSetup() {
+      bankView.classList.add("hidden");
+      summary.classList.add("hidden");
+      quiz.classList.add("hidden");
+      setup.classList.remove("hidden");
+      window.scrollTo({top:0, behavior:"smooth"});
+    }
+
+    function setAllAnswersOpen(open) {
+      document.querySelectorAll(".bank-item").forEach(item => item.open = open);
+    }
+
     function submitAnswer() {
       if (answered) return;
       const q = session[index];
@@ -637,6 +764,10 @@
     }
 
     el("startBtn").addEventListener("click", () => startQuiz());
+    el("viewBankBtn").addEventListener("click", showBankView);
+    el("expandAllBtn").addEventListener("click", () => setAllAnswersOpen(true));
+    el("collapseAllBtn").addEventListener("click", () => setAllAnswersOpen(false));
+    el("closeBankBtn").addEventListener("click", showSetup);
     el("countSelect").addEventListener("change", updateOrderInfo);
     el("sectionSelect").addEventListener("change", updateOrderInfo);
     document.querySelectorAll('input[name="qtype"]').forEach(input => input.addEventListener("change", updateOrderInfo));
@@ -644,7 +775,7 @@
     el("nextBtn").addEventListener("click", nextQuestion);
     el("quitBtn").addEventListener("click", showSummary);
     el("againBtn").addEventListener("click", () => startQuiz(lastSettings));
-    el("backBtn").addEventListener("click", () => { summary.classList.add("hidden"); setup.classList.remove("hidden"); window.scrollTo({top:0,behavior:"smooth"}); });
+    el("backBtn").addEventListener("click", showSetup);
     document.addEventListener("keydown", event => {
       if (quiz.classList.contains("hidden")) return;
       if (event.key === "Enter") answered ? nextQuestion() : submitAnswer();
