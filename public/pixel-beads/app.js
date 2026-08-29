@@ -6,12 +6,12 @@ import {
   createForegroundMask,
   maskStats,
   quantizeToGrid,
+  recommendGridSize,
 } from "./core.js";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const DISPLAY_SIZE = 720;
 const PREVIEW_PROCESS_SIZE = 360;
-const HIGH_DETAIL_PROCESS_SIZE = 648;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const elements = {
@@ -21,7 +21,8 @@ const elements = {
   fileName: document.querySelector("#file-name"),
   fileMeta: document.querySelector("#file-meta"),
   replaceButton: document.querySelector("#replace-button"),
-  gridSizeInputs: [...document.querySelectorAll('input[name="grid-size"]')],
+  recommendedSize: document.querySelector("#recommended-size"),
+  recommendedReason: document.querySelector("#recommended-reason"),
   controls: document.querySelector("#controls"),
   zoomRange: document.querySelector("#zoom-range"),
   zoomOutput: document.querySelector("#zoom-output"),
@@ -62,6 +63,7 @@ const state = {
   imageWidth: 0,
   imageHeight: 0,
   gridSize: GRID_SIZE,
+  recommendation: null,
   baseScale: 1,
   zoom: 1,
   offsetX: 0,
@@ -187,10 +189,20 @@ function renderMaskPreview({ silent = false } = {}) {
   cropContext.imageSmoothingQuality = "high";
   cropContext.drawImage(maskCanvas, 0, 0, DISPLAY_SIZE, DISPLAY_SIZE);
 
+  const recommendation = processed.maskResult.foregroundCount > 0
+    ? recommendGridSize(processed.imageData.data, processed.size, processed.size, processed.maskResult.mask)
+    : null;
+  if (recommendation) syncGridSize(recommendation);
+  else resetAutomaticSize({ value: "等待调整", reason: "当前没有识别到有效主体，请调整背景容差或关闭去背景。" });
+
   const warning = maskWarning(processed);
   if (!silent) {
     if (warning) setStatus(warning.message, warning.type);
-    else setStatus("主体区域已更新，可以生成拼豆图。", "");
+    else if (state.imageWidth < state.gridSize * 10 || state.imageHeight < state.gridSize * 10) {
+      setStatus(`已自动选择 ${state.gridSize}×${state.gridSize}；原图低于建议的 ${state.gridSize * 10}×${state.gridSize * 10}，细节可能受限。`, "warning");
+    } else {
+      setStatus(`已自动选择 ${state.gridSize}×${state.gridSize}，可以生成拼豆图。`, "");
+    }
   }
   return processed;
 }
@@ -212,22 +224,34 @@ function clearResult() {
   elements.emptyCount.textContent = String(state.gridSize * state.gridSize);
 }
 
-function syncGridSize(nextSize) {
+function resetAutomaticSize(options = {}) {
+  state.gridSize = GRID_SIZE;
+  state.recommendation = null;
+  elements.recommendedSize.textContent = options.value ?? "等待图片";
+  elements.recommendedReason.textContent = options.reason ?? "上传后会分析主体复杂度，选择最小但足够清楚的尺寸。";
+  elements.generateLabel.textContent = "分析后生成拼豆图";
+  elements.cropSizeLabel.textContent = "AUTO";
+  elements.resultCanvas.setAttribute("aria-label", "自动尺寸圆形拼豆效果预览");
+  elements.downloadDescription.textContent = "效果图为透明背景圆形拼豆，施工图包含自动选择的完整网格、颜色编号和实际用量。";
+  document.body.dataset.gridSize = "pending";
+  delete document.body.dataset.recommendationScore;
+  clearResult();
+}
+
+function syncGridSize(recommendation) {
+  const nextSize = recommendation.gridSize;
   if (!SUPPORTED_GRID_SIZES.includes(nextSize)) return;
   state.gridSize = nextSize;
+  state.recommendation = recommendation;
+  elements.recommendedSize.textContent = `${nextSize} × ${nextSize}`;
+  elements.recommendedReason.textContent = recommendation.reason;
   elements.generateLabel.textContent = `生成 ${nextSize}×${nextSize} 拼豆图`;
   elements.cropSizeLabel.textContent = `${nextSize} × ${nextSize}`;
   elements.resultCanvas.setAttribute("aria-label", `${nextSize}乘${nextSize}圆形拼豆效果预览`);
   elements.downloadDescription.textContent = `效果图为透明背景圆形拼豆，施工图包含 ${nextSize}×${nextSize} 网格、颜色编号和实际用量。`;
   document.body.dataset.gridSize = String(nextSize);
+  document.body.dataset.recommendationScore = recommendation.score.toFixed(3);
   clearResult();
-
-  if (!state.image) return;
-  if (nextSize === 108 && (state.imageWidth < 1080 || state.imageHeight < 1080)) {
-    setStatus("已选择 108×108；原图低于建议的 1080×1080，仍可生成，但细节可能受限。", "warning");
-  } else {
-    setStatus(`已选择 ${nextSize}×${nextSize}；调整好主体后即可生成。`);
-  }
 }
 
 async function decodeImage(file) {
@@ -287,13 +311,9 @@ async function loadFile(file) {
     elements.generateButton.disabled = false;
     elements.cropEmpty.hidden = true;
     elements.cropCanvas.classList.add("has-image");
-    clearResult();
+    resetAutomaticSize();
 
     resetCropState();
-    const recommendedSize = state.gridSize === 108 ? 1080 : 360;
-    if (state.imageWidth < recommendedSize || state.imageHeight < recommendedSize) {
-      setStatus(`图片低于 ${recommendedSize}×${recommendedSize} 的建议尺寸，仍可生成，但主体边缘可能不够清晰。`, "warning");
-    }
   } catch {
     setStatus("图片无法读取，请确认文件没有损坏并换一张图片。", "error");
   } finally {
@@ -405,7 +425,7 @@ function updateResultDetails() {
 
 function generate() {
   if (!state.image) return;
-  const processingSize = state.gridSize === 108 ? HIGH_DETAIL_PROCESS_SIZE : PREVIEW_PROCESS_SIZE;
+  const processingSize = Math.max(PREVIEW_PROCESS_SIZE, state.gridSize * 6);
   const processed = processedCrop(processingSize);
   const warning = maskWarning(processed);
   if (processed.maskResult.foregroundCount === 0) {
@@ -475,14 +495,14 @@ function contrastText(hex) {
 
 function makeGuideCanvas() {
   const gridSize = state.result.gridSize;
-  const cellSize = gridSize === 108 ? 36 : 60;
+  const cellSize = gridSize === 36 ? 60 : (gridSize === 72 ? 48 : 36);
   const width = gridSize * cellSize;
-  const headerHeight = gridSize === 108 ? 260 : 220;
+  const headerHeight = gridSize === 36 ? 220 : 260;
   const gridHeight = gridSize * cellSize;
   const usedColors = PALETTE.filter((color) => state.result.counts[color.code]);
-  const columns = gridSize === 108 ? 6 : 4;
+  const columns = gridSize === 36 ? 4 : 6;
   const rows = Math.ceil(usedColors.length / columns);
-  const legendTop = headerHeight + gridHeight + (gridSize === 108 ? 160 : 120);
+  const legendTop = headerHeight + gridHeight + (gridSize === 36 ? 120 : 160);
   const height = legendTop + Math.max(1, rows) * 72 + 120;
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -512,9 +532,9 @@ function makeGuideCanvas() {
     context.fillRect(x, y, cellSize, cellSize);
     if (cell) {
       context.fillStyle = contrastText(cell.hex);
-      const fontSize = gridSize === 108
-        ? (cell.code.length > 2 ? 10 : 12)
-        : (cell.code.length > 2 ? 15 : 18);
+      const fontSize = gridSize === 36
+        ? (cell.code.length > 2 ? 15 : 18)
+        : (gridSize === 72 ? (cell.code.length > 2 ? 13 : 15) : (cell.code.length > 2 ? 10 : 12));
       context.font = `700 ${fontSize}px ui-monospace, monospace`;
       context.textAlign = "center";
       context.textBaseline = "middle";
@@ -534,7 +554,7 @@ function makeGuideCanvas() {
   }
   context.stroke();
 
-  if (gridSize === 108) {
+  if (gridSize >= 72) {
     context.strokeStyle = "rgba(232,124,50,.95)";
     context.lineWidth = 4;
     context.beginPath();
@@ -598,11 +618,6 @@ elements.dropZone.addEventListener("drop", (event) => {
   loadFile(event.dataTransfer?.files?.[0]);
 });
 elements.zoomRange.addEventListener("input", () => updateZoom(Number(elements.zoomRange.value)));
-elements.gridSizeInputs.forEach((input) => {
-  input.addEventListener("change", () => {
-    if (input.checked) syncGridSize(Number(input.value));
-  });
-});
 elements.removeBackground.addEventListener("change", () => {
   elements.toleranceControl.hidden = !elements.removeBackground.checked;
   scheduleMaskPreview(0);
@@ -644,7 +659,14 @@ window.__PIXEL_BEADS__ = {
     emptyCount: state.result?.emptyCount ?? state.gridSize * state.gridSize,
     usedColorCount: state.result?.usedColorCount ?? 0,
     clarityEnhancement: elements.clarityEnhancement.checked,
+    recommendation: state.recommendation ? {
+      gridSize: state.recommendation.gridSize,
+      score: state.recommendation.score,
+      edgeDensity: state.recommendation.edgeDensity,
+      colorBinCount: state.recommendation.colorBinCount,
+      boundaryComplexity: state.recommendation.boundaryComplexity,
+    } : null,
   }),
 };
 
-syncGridSize(GRID_SIZE);
+resetAutomaticSize();

@@ -81,15 +81,14 @@ main, footer { width: min(calc(100% - 48px), var(--max)); margin-inline: auto; }
 .source-tips { margin: 16px 0 0; padding: 14px 16px; border-left: 3px solid var(--orange); background: var(--surface); }
 .source-tips strong { font-size: 12px; }
 .source-tips p { margin: 7px 0 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
-.size-selector { margin: 22px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: 0; }
-.size-selector legend { width: 100%; margin-bottom: 10px; font-size: 12px; font-weight: 700; }
-.size-selector label { position: relative; cursor: pointer; }
-.size-selector input { position: absolute; opacity: 0; pointer-events: none; }
-.size-selector label > span { min-height: 92px; padding: 13px 12px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line); background: var(--paper); transition: border-color .2s ease, background .2s ease; }
-.size-selector strong { font: 700 14px/1 ui-monospace, monospace; }
-.size-selector small { color: var(--muted); font-size: 10px; line-height: 1.55; }
-.size-selector input:checked + span { border-color: var(--orange); background: #fff7ef; box-shadow: inset 0 -3px var(--orange); }
-.size-selector input:focus-visible + span { outline: 2px solid var(--blue); outline-offset: 2px; }
+.auto-size-card { margin: 22px 0 0; padding: 16px; border: 1px solid var(--orange); background: #fff7ef; }
+.auto-size-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.auto-size-heading span { color: var(--orange); font: 700 10px/1 ui-monospace, monospace; letter-spacing: .13em; }
+.auto-size-heading strong { font-size: 12px; }
+.auto-size-value { margin-top: 20px; display: block; font: 700 30px/1 ui-monospace, monospace; letter-spacing: -.06em; }
+.auto-size-card p { min-height: 3.2em; margin: 10px 0 16px; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.size-scale { position: relative; display: flex; justify-content: space-between; color: var(--muted); font: 9px/1 ui-monospace, monospace; }
+.size-scale::before { content: ""; position: absolute; left: 0; right: 0; top: -7px; height: 2px; background: linear-gradient(90deg, var(--orange), var(--blue)); }
 .controls { margin: 26px 0 0; padding: 0; border: 0; }
 .controls:disabled { opacity: .45; }
 .controls legend { width: 100%; margin-bottom: 22px; padding: 0 0 10px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; }

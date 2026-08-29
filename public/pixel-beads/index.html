@@ -4,22 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f5f3ec" />
-    <meta name="description" content="把图片转换为使用指定48色色卡的36×36或108×108拼豆效果图和施工图。图片只在浏览器本地处理。" />
-    <meta property="og:title" content="36×36 / 108×108 拼豆图生成器｜Snake" />
-    <meta property="og:description" content="上传、裁切、去除简单背景，生成可下载的拼豆效果图和施工图。" />
+    <meta name="description" content="根据上传主体自动选择36×36、72×72或108×108，生成使用指定48色色卡的拼豆效果图和施工图。图片只在浏览器本地处理。" />
+    <meta property="og:title" content="36–108 自动尺寸拼豆图生成器｜Snake" />
+    <meta property="og:description" content="上传、裁切、自动判断合理尺寸，生成可下载的拼豆效果图和施工图。" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://xxsnake.github.io/pixel-beads/" />
     <meta property="og:image" content="https://xxsnake.github.io/pixel-beads/og.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
-    <title>36×36 / 108×108 拼豆图生成器｜Snake</title>
+    <title>36–108 自动尺寸拼豆图生成器｜Snake</title>
   </head>
   <body>
     <header class="site-header">
       <a class="brand" href="/" aria-label="返回 Snake 个人主页">
         <strong>SNAKE</strong>
-        <span>PIXEL BEADS / 36 &amp; 108</span>
+        <span>PIXEL BEADS / AUTO 36–108</span>
       </a>
       <a class="back-link" href="/">返回主页 <span aria-hidden="true">↗</span></a>
     </header>
@@ -29,7 +29,7 @@
         <div class="hero-copy">
           <p class="eyebrow">LOCAL IMAGE TOOL · 48 COLORS</p>
           <h1 id="page-title">把图片，变成<br /><em>可以摆出来</em>的拼豆图。</h1>
-          <p class="hero-intro">上传图片、选好主体，再按作品复杂度选择 36×36 或 108×108。自动生成圆形拼豆效果图与带编号施工图，空白位置不放豆。</p>
+          <p class="hero-intro">上传图片、选好主体，页面会根据轮廓、颜色和细节密度自动选择 36×36、72×72 或 108×108。空白位置不放豆。</p>
         </div>
         <div class="privacy-card">
           <span>01</span>
@@ -65,20 +65,15 @@
 
           <div class="source-tips">
             <strong>推荐图片</strong>
-            <p>36×36 建议至少 360×360，108×108 建议至少 1080×1080；只有一个清晰主体；主体占画面 60%–90%；优先透明或单色背景。</p>
+            <p>建议至少 1080×1080；只有一个清晰主体；主体占画面 60%–90%；优先透明或单色背景。</p>
           </div>
 
-          <fieldset class="size-selector" aria-labelledby="size-legend">
-            <legend id="size-legend">拼豆尺寸</legend>
-            <label>
-              <input type="radio" name="grid-size" value="36" checked />
-              <span><strong>36 × 36</strong><small>图标、简单主体<br />最多 1,296 颗</small></span>
-            </label>
-            <label>
-              <input type="radio" name="grid-size" value="108" />
-              <span><strong>108 × 108</strong><small>人像、复杂细节<br />最多 11,664 颗</small></span>
-            </label>
-          </fieldset>
+          <section class="auto-size-card" aria-labelledby="auto-size-title" aria-live="polite">
+            <div class="auto-size-heading"><span>AUTO SIZE</span><strong id="auto-size-title">自动选择尺寸</strong></div>
+            <strong class="auto-size-value" id="recommended-size">等待图片</strong>
+            <p id="recommended-reason">上传后会分析主体复杂度，选择最小但足够清楚的尺寸。</p>
+            <div class="size-scale" aria-hidden="true"><span>36</span><span>72</span><span>108</span></div>
+          </section>
 
           <fieldset class="controls" id="controls" disabled>
             <legend>取景与背景</legend>
@@ -119,7 +114,7 @@
           </fieldset>
 
           <button type="button" class="primary-button" id="generate-button" disabled>
-            <span id="generate-label">生成 36×36 拼豆图</span><span aria-hidden="true">→</span>
+            <span id="generate-label">分析后生成拼豆图</span><span aria-hidden="true">→</span>
           </button>
           <p class="status-message" id="status-message" role="status" aria-live="polite"></p>
         </aside>
@@ -133,7 +128,7 @@
             <div class="canvas-frame checkerboard" id="crop-frame">
               <canvas id="crop-canvas" width="720" height="720" aria-label="图片裁切与透明区域预览"></canvas>
               <div class="empty-state" id="crop-empty">
-                <span id="crop-size-label">36 × 36</span>
+                <span id="crop-size-label">AUTO</span>
                 <p>上传图片后在这里调整主体</p>
               </div>
               <div class="crop-guides" aria-hidden="true"></div>
@@ -186,7 +181,7 @@
         <ul>
           <li>透明背景 PNG 的识别最准确。</li>
           <li>白色或单色背景适合自动去除。</li>
-          <li>36×36 更接近简洁像素图；人像和复杂主体建议选 108×108。</li>
+          <li>简单图标自动使用 36×36，中等细节使用 72×72，复杂主体最高使用 108×108。</li>
           <li>复杂街景、多人、毛发和细小文字仍可能丢失。</li>
           <li>色卡来自实拍照片，与实体颜色可能存在轻微差异。</li>
         </ul>
@@ -195,7 +190,7 @@
 
     <footer>
       <a href="/">SNAKE · 工程 × AI × 视觉</a>
-      <span>36 × 36 / 108 × 108 PIXEL BEADS</span>
+      <span>AUTO 36–108 PIXEL BEADS</span>
     </footer>
 
     <script type="module" src="./app.js"></script>

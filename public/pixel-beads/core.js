@@ -1,5 +1,5 @@
 export const GRID_SIZE = 36;
-export const SUPPORTED_GRID_SIZES = Object.freeze([36, 108]);
+export const SUPPORTED_GRID_SIZES = Object.freeze([36, 72, 108]);
 export const COVERAGE_THRESHOLD = 0.35;
 
 const RAW_PALETTE = [
@@ -186,6 +186,96 @@ export function createForegroundMask(data, width, height, options = {}) {
   }
 
   return { mask, background, originallyVisible, removedOpaque, foregroundCount };
+}
+
+function clampUnit(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+export function recommendGridSize(data, width, height, mask) {
+  const sampleStep = Math.max(1, Math.floor(Math.min(width, height) / 180));
+  const colorBins = new Set();
+  let visibleSamples = 0;
+  let edgePairs = 0;
+  let strongEdges = 0;
+  let boundaryTransitions = 0;
+
+  const compare = (index, neighbourIndex) => {
+    const visible = Boolean(mask[index]);
+    const neighbourVisible = Boolean(mask[neighbourIndex]);
+    if (visible !== neighbourVisible) boundaryTransitions += 1;
+    if (!visible || !neighbourVisible) return;
+
+    const offset = index * 4;
+    const neighbourOffset = neighbourIndex * 4;
+    const red = data[offset] - data[neighbourOffset];
+    const green = data[offset + 1] - data[neighbourOffset + 1];
+    const blue = data[offset + 2] - data[neighbourOffset + 2];
+    const distance = Math.sqrt(red * red + green * green + blue * blue);
+    edgePairs += 1;
+    if (distance >= 46) strongEdges += 1;
+  };
+
+  for (let y = 0; y < height; y += sampleStep) {
+    for (let x = 0; x < width; x += sampleStep) {
+      const index = y * width + x;
+      if (mask[index]) {
+        const offset = index * 4;
+        colorBins.add(`${data[offset] >> 5}:${data[offset + 1] >> 5}:${data[offset + 2] >> 5}`);
+        visibleSamples += 1;
+      }
+      if (x + sampleStep < width) compare(index, index + sampleStep);
+      if (y + sampleStep < height) compare(index, index + sampleStep * width);
+    }
+  }
+
+  if (visibleSamples < 64) {
+    return {
+      gridSize: 36,
+      score: 0,
+      edgeDensity: 0,
+      colorBinCount: colorBins.size,
+      boundaryComplexity: 0,
+      reason: "主体占用区域很小，先使用 36×36；如需更多细节，请在取景框中放大主体。",
+    };
+  }
+
+  const edgeDensity = strongEdges / Math.max(1, edgePairs);
+  const edgeScore = clampUnit((edgeDensity - 0.025) / 0.18);
+  const colorScore = clampUnit((colorBins.size - 8) / 52);
+  const outlineBaseline = Math.max(1, Math.sqrt(visibleSamples) * 4);
+  const boundaryComplexity = boundaryTransitions / outlineBaseline;
+  const boundaryScore = clampUnit((boundaryComplexity - 1) / 2.2);
+  const score = edgeScore * 0.55 + colorScore * 0.3 + boundaryScore * 0.15;
+
+  if (score < 0.28) {
+    return {
+      gridSize: 36,
+      score,
+      edgeDensity,
+      colorBinCount: colorBins.size,
+      boundaryComplexity,
+      reason: "主体轮廓和色块较简单，36×36 已能清楚表达。",
+    };
+  }
+  if (score < 0.62) {
+    return {
+      gridSize: 72,
+      score,
+      edgeDensity,
+      colorBinCount: colorBins.size,
+      boundaryComplexity,
+      reason: "主体包含一定颜色与轮廓细节，72×72 能兼顾清晰度和用豆量。",
+    };
+  }
+  return {
+    gridSize: 108,
+    score,
+    edgeDensity,
+    colorBinCount: colorBins.size,
+    boundaryComplexity,
+    reason: "主体细节和颜色变化较多，108×108 更适合保留主要特征。",
+  };
 }
 
 export function quantizeToGrid(data, width, height, mask, options = {}) {
