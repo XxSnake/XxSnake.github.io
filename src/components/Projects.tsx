@@ -23,6 +23,7 @@ export function Projects() {
             {project.stats && <div className="project-stats">{project.stats.map((stat) => <div key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></div>)}</div>}
             <div className="project-tags">{project.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
             {project.note && <aside>{project.note}</aside>}
+            {project.href && <a className="project-link" href={project.href} aria-label={`打开${project.title}`}>打开工具 <span aria-hidden="true">↗</span></a>}
           </article>
         ))}
       </div>

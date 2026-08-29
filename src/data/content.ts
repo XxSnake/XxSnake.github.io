@@ -66,6 +66,7 @@ export const projects: Array<{
   categories: ProjectCategory[];
   description: string;
   tags: string[];
+  href?: string;
   note?: string;
   stats?: Array<{ value: string; label: string }>;
 }> = [
@@ -103,6 +104,14 @@ export const projects: Array<{
     categories: ["AI", "知识系统"],
     description: "将 ChatGPT、Codex、Obsidian、Google Drive 和个人知识档案连接起来，形成一套长期演进的 AI 协作系统。",
     tags: ["角色分工", "协作流程", "知识沉淀", "持续更新"],
+  },
+  {
+    number: "P-05",
+    title: "36×36 / 108×108 拼豆图生成器",
+    categories: ["视觉"],
+    description: "把图片在浏览器本地转换为 36×36 或 108×108 拼豆效果图与带编号施工图，支持主体裁切、清晰增强、简单背景去除和实际用量统计。",
+    tags: ["48 色卡", "两种尺寸", "主体留白", "图纸下载"],
+    href: "/pixel-beads/",
   },
 ];
 

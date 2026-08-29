@@ -141,6 +141,8 @@ main { overflow: clip; }
 .project-tags span { color: var(--muted); font-size: 12px; }
 .project-tags span::before { content: "#"; color: var(--orange); }
 .project-card aside { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.6; }
+.project-link { margin-top: 22px; padding-top: 15px; display: flex; justify-content: space-between; border-top: 1px solid var(--text); font-size: 13px; font-weight: 700; }
+.project-link span { color: var(--orange); }
 
 .works-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .work-card { min-width: 0; }
