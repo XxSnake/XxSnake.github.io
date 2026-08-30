@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   GRID_SIZE,
+  MAX_GRID_SIZE,
+  MIN_GRID_SIZE,
   PALETTE,
   SUPPORTED_GRID_SIZES,
   createForegroundMask,
@@ -28,8 +30,12 @@ function paintRect(data, width, xStart, yStart, xEnd, yEnd, color, alpha = 255) 
 
 assert.equal(PALETTE.length, 48, "palette must contain 48 colors");
 assert.equal(new Set(PALETTE.map((color) => color.code)).size, 48, "palette codes must be unique");
-assert.equal(GRID_SIZE, 36);
-assert.deepEqual(SUPPORTED_GRID_SIZES, [36, 72, 108]);
+assert.equal(GRID_SIZE, MIN_GRID_SIZE);
+assert.equal(MIN_GRID_SIZE, 36);
+assert.equal(MAX_GRID_SIZE, 104);
+assert.equal(SUPPORTED_GRID_SIZES.length, MAX_GRID_SIZE - MIN_GRID_SIZE + 1);
+assert.equal(SUPPORTED_GRID_SIZES[0], MIN_GRID_SIZE);
+assert.equal(SUPPORTED_GRID_SIZES.at(-1), MAX_GRID_SIZE);
 
 for (const color of PALETTE) {
   assert.equal(nearestPaletteColor(...color.rgb).code, color.code, `exact color ${color.code} must map to itself`);
@@ -72,10 +78,10 @@ const highDetailSize = 648;
 const highDetail = solidImage(highDetailSize, highDetailSize, [250, 250, 248]);
 paintRect(highDetail, highDetailSize, 108, 108, 540, 540, [35, 46, 87]);
 const highDetailMask = createForegroundMask(highDetail, highDetailSize, highDetailSize, { removeBackground: true, tolerance: 14 });
-const highDetailGrid = quantizeToGrid(highDetail, highDetailSize, highDetailSize, highDetailMask.mask, { gridSize: 108 });
-assert.equal(highDetailGrid.gridSize, 108);
-assert.equal(highDetailGrid.beadCount, 72 * 72, "108 grid should preserve the centered subject at higher detail");
-assert.equal(highDetailGrid.emptyCount + highDetailGrid.beadCount, 108 * 108);
+const highDetailGrid = quantizeToGrid(highDetail, highDetailSize, highDetailSize, highDetailMask.mask, { gridSize: 104 });
+assert.equal(highDetailGrid.gridSize, 104);
+assert.ok(highDetailGrid.beadCount > 4700 && highDetailGrid.beadCount < 5200, "104 grid should preserve the centered subject at higher detail");
+assert.equal(highDetailGrid.emptyCount + highDetailGrid.beadCount, 104 * 104);
 assert.equal(Object.values(highDetailGrid.counts).reduce((sum, count) => sum + count, 0), highDetailGrid.beadCount);
 assert.ok(highDetailGrid.beadCount <= 11664);
 
@@ -89,9 +95,10 @@ for (let y = 0; y < mediumDetailSize; y += 1) {
   }
 }
 const mediumMask = createForegroundMask(mediumDetail, mediumDetailSize, mediumDetailSize, { removeBackground: false });
-assert.equal(recommendGridSize(mediumDetail, mediumDetailSize, mediumDetailSize, mediumMask.mask).gridSize, 72, "medium repeated detail should use the middle grid");
-const mediumGrid = quantizeToGrid(mediumDetail, mediumDetailSize, mediumDetailSize, mediumMask.mask, { gridSize: 72 });
-assert.equal(mediumGrid.emptyCount + mediumGrid.beadCount, 72 * 72);
+const mediumRecommendation = recommendGridSize(mediumDetail, mediumDetailSize, mediumDetailSize, mediumMask.mask);
+assert.ok(mediumRecommendation.gridSize > MIN_GRID_SIZE && mediumRecommendation.gridSize < MAX_GRID_SIZE, "medium repeated detail should use a specific in-between grid");
+const mediumGrid = quantizeToGrid(mediumDetail, mediumDetailSize, mediumDetailSize, mediumMask.mask, { gridSize: mediumRecommendation.gridSize });
+assert.equal(mediumGrid.emptyCount + mediumGrid.beadCount, mediumRecommendation.gridSize ** 2);
 
 const fineDetail = solidImage(mediumDetailSize, mediumDetailSize, [0, 0, 0]);
 for (let y = 0; y < mediumDetailSize; y += 1) {
@@ -101,12 +108,18 @@ for (let y = 0; y < mediumDetailSize; y += 1) {
   }
 }
 const fineMask = createForegroundMask(fineDetail, mediumDetailSize, mediumDetailSize, { removeBackground: false });
-assert.equal(recommendGridSize(fineDetail, mediumDetailSize, mediumDetailSize, fineMask.mask).gridSize, 108, "fine multicolor detail should use the largest grid");
+const fineRecommendation = recommendGridSize(fineDetail, mediumDetailSize, mediumDetailSize, fineMask.mask);
+assert.ok(fineRecommendation.gridSize >= 90 && fineRecommendation.gridSize <= MAX_GRID_SIZE, "fine multicolor detail should use a high grid");
 
 assert.throws(
-  () => quantizeToGrid(whiteWithSubject, width, height, removed.mask, { gridSize: 54 }),
+  () => quantizeToGrid(whiteWithSubject, width, height, removed.mask, { gridSize: MIN_GRID_SIZE - 1 }),
   /unsupported grid size/,
-  "only the three supported grid sizes should be accepted",
+  "sizes below the supported range should be rejected",
+);
+assert.throws(
+  () => quantizeToGrid(whiteWithSubject, width, height, removed.mask, { gridSize: MAX_GRID_SIZE + 1 }),
+  /unsupported grid size/,
+  "sizes above the supported range should be rejected",
 );
 
-console.log("Pixel-beads tests passed: 48 colors, background removal, auto sizing, and 36/72/108 counts.");
+console.log(`Pixel-beads tests passed: 48 colors, background removal, auto sizing (${MIN_GRID_SIZE}-${MAX_GRID_SIZE}), and dynamic grid counts (medium=${mediumRecommendation.gridSize}).`);

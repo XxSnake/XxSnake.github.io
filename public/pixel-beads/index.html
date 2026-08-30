@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f5f3ec" />
-    <meta name="description" content="根据上传主体自动选择36×36、72×72或108×108，生成使用指定48色色卡的拼豆效果图和施工图。图片只在浏览器本地处理。" />
-    <meta property="og:title" content="36–108 自动尺寸拼豆图生成器｜Snake" />
+    <meta name="description" content="根据上传主体自动选择36×36到104×104之间的具体尺寸，生成使用指定48色色卡的拼豆效果图和施工图。图片只在浏览器本地处理。" />
+    <meta property="og:title" content="36–104 自动尺寸拼豆图生成器｜Snake" />
     <meta property="og:description" content="上传、裁切、自动判断合理尺寸，生成可下载的拼豆效果图和施工图。" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://xxsnake.github.io/pixel-beads/" />
@@ -13,13 +13,13 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
-    <title>36–108 自动尺寸拼豆图生成器｜Snake</title>
+    <title>36–104 自动尺寸拼豆图生成器｜Snake</title>
   </head>
   <body>
     <header class="site-header">
       <a class="brand" href="/" aria-label="返回 Snake 个人主页">
         <strong>SNAKE</strong>
-        <span>PIXEL BEADS / AUTO 36–108</span>
+        <span>PIXEL BEADS / AUTO 36–104</span>
       </a>
       <a class="back-link" href="/">返回主页 <span aria-hidden="true">↗</span></a>
     </header>
@@ -29,7 +29,7 @@
         <div class="hero-copy">
           <p class="eyebrow">LOCAL IMAGE TOOL · 48 COLORS</p>
           <h1 id="page-title">把图片，变成<br /><em>可以摆出来</em>的拼豆图。</h1>
-          <p class="hero-intro">上传图片、选好主体，页面会根据轮廓、颜色和细节密度自动选择 36×36、72×72 或 108×108。空白位置不放豆。</p>
+          <p class="hero-intro">上传图片、选好主体，页面会根据轮廓、颜色和细节密度，在 36×36 到 104×104 之间自动选择具体尺寸。空白位置不放豆。</p>
         </div>
         <div class="privacy-card">
           <span>01</span>
@@ -65,14 +65,14 @@
 
           <div class="source-tips">
             <strong>推荐图片</strong>
-            <p>建议至少 1080×1080；只有一个清晰主体；主体占画面 60%–90%；优先透明或单色背景。</p>
+            <p>建议至少 1040×1040；只有一个清晰主体；主体占画面 60%–90%；优先透明或单色背景。</p>
           </div>
 
           <section class="auto-size-card" aria-labelledby="auto-size-title" aria-live="polite">
             <div class="auto-size-heading"><span>AUTO SIZE</span><strong id="auto-size-title">自动选择尺寸</strong></div>
             <strong class="auto-size-value" id="recommended-size">等待图片</strong>
-            <p id="recommended-reason">上传后会分析主体复杂度，选择最小但足够清楚的尺寸。</p>
-            <div class="size-scale" aria-hidden="true"><span>36</span><span>72</span><span>108</span></div>
+            <p id="recommended-reason">上传后会分析主体复杂度，在 36×36 到 104×104 之间选择最小但足够清楚的尺寸。</p>
+            <div class="size-scale" aria-hidden="true"><span>36</span><span>自动</span><span>104</span></div>
           </section>
 
           <fieldset class="controls" id="controls" disabled>
@@ -141,7 +141,7 @@
               <p>每个圆点代表一颗拼豆，透明位置不会计入用量。</p>
             </div>
             <div class="canvas-frame checkerboard result-frame">
-              <canvas id="result-canvas" width="720" height="720" aria-label="36乘36圆形拼豆效果预览"></canvas>
+              <canvas id="result-canvas" width="720" height="720" aria-label="自动尺寸圆形拼豆效果预览"></canvas>
               <div class="empty-state" id="result-empty">
                 <span>READY</span>
                 <p>调整好主体后点击生成</p>
@@ -162,7 +162,7 @@
           <div>
             <p class="eyebrow">04 / EXPORT</p>
             <h2 id="download-title">下载你的图纸</h2>
-            <p id="download-description">效果图为透明背景圆形拼豆，施工图包含 36×36 网格、颜色编号和实际用量。</p>
+            <p id="download-description">效果图为透明背景圆形拼豆，施工图包含自动选择的完整网格、颜色编号和实际用量。</p>
           </div>
           <div class="download-actions">
             <button type="button" class="primary-button" id="download-preview">下载拼豆效果图 <span aria-hidden="true">↓</span></button>
@@ -181,7 +181,7 @@
         <ul>
           <li>透明背景 PNG 的识别最准确。</li>
           <li>白色或单色背景适合自动去除。</li>
-          <li>简单图标自动使用 36×36，中等细节使用 72×72，复杂主体最高使用 108×108。</li>
+          <li>系统会根据主题复杂度，在 36×36 到 104×104 之间逐格选择具体尺寸，不局限于三档。</li>
           <li>复杂街景、多人、毛发和细小文字仍可能丢失。</li>
           <li>色卡来自实拍照片，与实体颜色可能存在轻微差异。</li>
         </ul>
@@ -190,7 +190,7 @@
 
     <footer>
       <a href="/">SNAKE · 工程 × AI × 视觉</a>
-      <span>AUTO 36–108 PIXEL BEADS</span>
+      <span>AUTO 36–104 PIXEL BEADS</span>
     </footer>
 
     <script type="module" src="./app.js"></script>

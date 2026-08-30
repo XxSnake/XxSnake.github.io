@@ -1,6 +1,8 @@
 import {
   COVERAGE_THRESHOLD,
   GRID_SIZE,
+  MAX_GRID_SIZE,
+  MIN_GRID_SIZE,
   PALETTE,
   SUPPORTED_GRID_SIZES,
   createForegroundMask,
@@ -228,7 +230,7 @@ function resetAutomaticSize(options = {}) {
   state.gridSize = GRID_SIZE;
   state.recommendation = null;
   elements.recommendedSize.textContent = options.value ?? "等待图片";
-  elements.recommendedReason.textContent = options.reason ?? "上传后会分析主体复杂度，选择最小但足够清楚的尺寸。";
+  elements.recommendedReason.textContent = options.reason ?? `上传后会分析主体复杂度，在 ${MIN_GRID_SIZE}×${MIN_GRID_SIZE} 到 ${MAX_GRID_SIZE}×${MAX_GRID_SIZE} 之间选择最小但足够清楚的尺寸。`;
   elements.generateLabel.textContent = "分析后生成拼豆图";
   elements.cropSizeLabel.textContent = "AUTO";
   elements.resultCanvas.setAttribute("aria-label", "自动尺寸圆形拼豆效果预览");
@@ -495,14 +497,14 @@ function contrastText(hex) {
 
 function makeGuideCanvas() {
   const gridSize = state.result.gridSize;
-  const cellSize = gridSize === 36 ? 60 : (gridSize === 72 ? 48 : 36);
+  const cellSize = gridSize <= 48 ? 60 : (gridSize <= 72 ? 48 : (gridSize <= 88 ? 40 : 36));
   const width = gridSize * cellSize;
-  const headerHeight = gridSize === 36 ? 220 : 260;
+  const headerHeight = gridSize <= 48 ? 220 : 260;
   const gridHeight = gridSize * cellSize;
   const usedColors = PALETTE.filter((color) => state.result.counts[color.code]);
-  const columns = gridSize === 36 ? 4 : 6;
+  const columns = gridSize <= 48 ? 4 : 6;
   const rows = Math.ceil(usedColors.length / columns);
-  const legendTop = headerHeight + gridHeight + (gridSize === 36 ? 120 : 160);
+  const legendTop = headerHeight + gridHeight + (gridSize <= 48 ? 120 : 160);
   const height = legendTop + Math.max(1, rows) * 72 + 120;
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -532,9 +534,7 @@ function makeGuideCanvas() {
     context.fillRect(x, y, cellSize, cellSize);
     if (cell) {
       context.fillStyle = contrastText(cell.hex);
-      const fontSize = gridSize === 36
-        ? (cell.code.length > 2 ? 15 : 18)
-        : (gridSize === 72 ? (cell.code.length > 2 ? 13 : 15) : (cell.code.length > 2 ? 10 : 12));
+      const fontSize = Math.max(8, Math.min(18, Math.floor(cellSize * (cell.code.length > 2 ? 0.27 : 0.32))));
       context.font = `700 ${fontSize}px ui-monospace, monospace`;
       context.textAlign = "center";
       context.textBaseline = "middle";
@@ -645,6 +645,8 @@ elements.downloadGuide.addEventListener("click", () => {
 
 window.__PIXEL_BEADS__ = {
   GRID_SIZE,
+  MIN_GRID_SIZE,
+  MAX_GRID_SIZE,
   SUPPORTED_GRID_SIZES,
   PALETTE,
   getState: () => ({

@@ -1,5 +1,9 @@
-export const GRID_SIZE = 36;
-export const SUPPORTED_GRID_SIZES = Object.freeze([36, 72, 108]);
+export const MIN_GRID_SIZE = 36;
+export const MAX_GRID_SIZE = 104;
+export const GRID_SIZE = MIN_GRID_SIZE;
+export const SUPPORTED_GRID_SIZES = Object.freeze(
+  Array.from({ length: MAX_GRID_SIZE - MIN_GRID_SIZE + 1 }, (_, index) => MIN_GRID_SIZE + index),
+);
 export const COVERAGE_THRESHOLD = 0.35;
 
 const RAW_PALETTE = [
@@ -231,12 +235,12 @@ export function recommendGridSize(data, width, height, mask) {
 
   if (visibleSamples < 64) {
     return {
-      gridSize: 36,
+      gridSize: MIN_GRID_SIZE,
       score: 0,
       edgeDensity: 0,
       colorBinCount: colorBins.size,
       boundaryComplexity: 0,
-      reason: "主体占用区域很小，先使用 36×36；如需更多细节，请在取景框中放大主体。",
+      reason: `主体占用区域很小，先使用 ${MIN_GRID_SIZE}×${MIN_GRID_SIZE}；如需更多细节，请在取景框中放大主体。`,
     };
   }
 
@@ -248,33 +252,22 @@ export function recommendGridSize(data, width, height, mask) {
   const boundaryScore = clampUnit((boundaryComplexity - 1) / 2.2);
   const score = edgeScore * 0.55 + colorScore * 0.3 + boundaryScore * 0.15;
 
-  if (score < 0.28) {
-    return {
-      gridSize: 36,
-      score,
-      edgeDensity,
-      colorBinCount: colorBins.size,
-      boundaryComplexity,
-      reason: "主体轮廓和色块较简单，36×36 已能清楚表达。",
-    };
-  }
-  if (score < 0.62) {
-    return {
-      gridSize: 72,
-      score,
-      edgeDensity,
-      colorBinCount: colorBins.size,
-      boundaryComplexity,
-      reason: "主体包含一定颜色与轮廓细节，72×72 能兼顾清晰度和用豆量。",
-    };
-  }
+  const gridSize = Math.max(
+    MIN_GRID_SIZE,
+    Math.min(MAX_GRID_SIZE, Math.round(MIN_GRID_SIZE + score * (MAX_GRID_SIZE - MIN_GRID_SIZE))),
+  );
+  const reason = score < 0.28
+    ? `主体轮廓和色块较简单，${gridSize}×${gridSize} 已能清楚表达。`
+    : score < 0.62
+      ? `主体包含一定颜色与轮廓细节，${gridSize}×${gridSize} 能兼顾清晰度和用豆量。`
+      : `主体细节和颜色变化较多，${gridSize}×${gridSize} 更适合保留主要特征。`;
   return {
-    gridSize: 108,
+    gridSize,
     score,
     edgeDensity,
     colorBinCount: colorBins.size,
     boundaryComplexity,
-    reason: "主体细节和颜色变化较多，108×108 更适合保留主要特征。",
+    reason,
   };
 }
 
@@ -282,7 +275,7 @@ export function quantizeToGrid(data, width, height, mask, options = {}) {
   const gridSize = options.gridSize ?? GRID_SIZE;
   const coverageThreshold = options.coverageThreshold ?? COVERAGE_THRESHOLD;
   const clarityEnhancement = options.clarityEnhancement ?? true;
-  if (!SUPPORTED_GRID_SIZES.includes(gridSize)) {
+  if (!Number.isInteger(gridSize) || !SUPPORTED_GRID_SIZES.includes(gridSize)) {
     throw new RangeError(`unsupported grid size: ${gridSize}`);
   }
 
