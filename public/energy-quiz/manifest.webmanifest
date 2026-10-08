@@ -1,0 +1,19 @@
+{
+  "name": "建筑节能检测规范重点条文刷题",
+  "short_name": "节能检测刷题",
+  "description": "建筑节能检测规范重点条文离线随机题库",
+  "lang": "zh-CN",
+  "start_url": "/energy-quiz/",
+  "scope": "/energy-quiz/",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#1769e0",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
